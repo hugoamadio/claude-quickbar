@@ -19,7 +19,7 @@ One JSON file turns the prompts you type every day into one-click buttons, and i
 You probably type the same handful of prompts all day: *explain this*, *review for bugs*, *run the tests and fix what fails*, *plan first*. Quickbar puts them one click away, in your own words, without leaving the prompt.
 
 - **Buttons** write a prompt, or send it right away.
-- **Selects** open their options above the bar. Options can open more options, so a few clicks compose a precise prompt.
+- **Selects** open their options above the bar, like a desktop menu: hover walks the levels, a click picks. Options can open more options, so a few moves compose a precise prompt.
 - **One file** describes everything: labels, colors, text, where the text goes, and whether it is sent.
 - **Live reload**: save the file and the bar updates. A broken file never breaks your session; the bar tells you what is wrong.
 
@@ -133,9 +133,11 @@ Colors accept hex (`#2e7d4f`) or terminal color names (`red`, `blueBright`).
 
 ## Using the bar
 
-- **Mouse**: click a button. Hover highlights it where the terminal reports the pointer.
-- **Keyboard**: press `ctrl+x` then `tab` to focus the bar, then a button's `hotkey`; `Esc` returns to the prompt.
-- Picking a different option at any level drops the levels above it; `✕` closes the select.
+- **Hover** works like a desktop menu bar: pointing at a select opens it, pointing at an option with `›` opens its level, and moving away closes the menus after a moment.
+- **Click** anywhere on a button, not only on its label. Clicking an open select or an open option again folds it; `✕` closes the select.
+- **Keyboard**: click the bar once to give it focus, then press a button's `hotkey`; `Esc` returns to the prompt.
+- Hover needs a terminal that reports mouse movement (most do). Without it, clicks do everything.
+- In VS Code, which has no pointer-tracking region yet, the bar falls back to plain clickable buttons.
 
 ## Validate a config in CI
 

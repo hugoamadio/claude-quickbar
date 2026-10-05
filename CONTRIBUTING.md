@@ -17,7 +17,9 @@ node scripts/check-config.ts               # the bundled example still validates
 
 | Path | What |
 |---|---|
-| `plugins/quickbar/hooks/register.tsx` | Hooks: loading the config, commands, drawing the bar |
+| `plugins/quickbar/hooks/register.tsx` | Hooks: loading the config, commands, delivering text, the VS Code fallback |
+| `plugins/quickbar/hooks/bar.tsx` | The bar as a Client: drawing, pointer and keys |
+| `plugins/quickbar/hooks/layout.ts` | Pill positions, hit testing, hover and click rules (pure) |
 | `plugins/quickbar/hooks/config.ts` | Parsing and validation (pure) |
 | `plugins/quickbar/hooks/compose.ts` | Select levels and the text a path writes (pure) |
 | `plugins/quickbar/types/index.d.ts` | Config types and the plugin's state contract |

@@ -2,12 +2,17 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { QuickbarButton, QuickbarConfig, QuickbarOption, QuickbarSource } from '../types'
-import { applyMode, chosen, deliveryOf, levels } from './compose'
+import type { BarProps } from './bar'
+import { applyMode, chosen, deliveryOf } from './compose'
 import { parse, resolveStyle } from './config'
+import { activate, layout } from './layout'
+import type { Pill } from './layout'
 
 // Quickbar: a band of big buttons above the prompt, read from quickbar.json.
 // A button writes its text into the prompt (or sends it); a select opens its options above the bar,
 // and each option can open another level, until a final choice writes the composed text.
+// Where the surface has a Client (terminal, desktop) the bar is ./bar.tsx: whole-pill clicks and hover
+// navigation. Elsewhere it falls back to plain Buttons driven by clicks.
 
 const config = atom({ plugin: 'quickbar', key: 'config' } as const, null as QuickbarConfig | null)
 const source = atom({ plugin: 'quickbar', key: 'source' } as const, null as QuickbarSource | null)
@@ -162,52 +167,55 @@ export const register: Register = on => {
       )
     }
 
-    const openIdx = await read($, open)
-    const picked = await read($, path)
-    const openButton = openIdx >= 0 ? cfg.buttons[openIdx] : undefined
+    const errLine = errs.length > 0 ? <Text dimColor>{`quickbar: ${errs[0]}`}</Text> : null
+    const table = $.ui.resolve(e)
 
-    const levelRows = openButton
-      ? levels(openButton, picked).map((opts, depth) => (
-        <Box key={`level-${depth}`} flexWrap="wrap">
-          {opts.map((opt, j) => {
-            const isChosen = picked[depth] === j
-            return pill(`opt-${depth}-${j}`, opt.options ? `${opt.label} ›` : opt.label,
-              isChosen ? st.activeColor : (opt.color ?? st.color),
-              async () => {
-                const nextPath = [...picked.slice(0, depth), j]
-                if (opt.options) {
-                  await update($, path, () => nextPath)
-                  return
-                }
-                await close($)
-                await deliver($, openButton, chosen(openButton, nextPath))
-              })
-          })}
-          {depth === 0 && pill('close', '✕', st.color, () => close($))}
+    // A Client (hover and whole-pill clicks) where the surface has one; the typings say terminal and desktop.
+    if ((e.surface === 'terminal' || e.surface === 'desktop') && 'Client' in table) {
+      const { Client } = table
+      const props: BarProps = { buttons: cfg.buttons, style: st, columns: e.props.bodyColumns }
+      return (
+        <Box key="quickbar" flexDirection="column">
+          <Client key="bar" module="./bar.tsx" props={props} />
+          {errLine}
         </Box>
-      )).reverse()
-      : []
+      )
+    }
 
+    // Fallback without a Client: the same layout drawn with Buttons, driven by clicks.
+    const view = { open: await read($, open), path: await read($, path) }
+    const l = layout(cfg.buttons, st, view, e.props.bodyColumns)
+    const press = (p: Pill) => async () => {
+      const act = activate(view, p)
+      await update($, open, () => act.view.open)
+      await update($, path, () => [...act.view.path])
+      if (act.kind === 'deliver') {
+        const b = cfg.buttons[act.button]
+        if (b) await deliver($, b, chosen(b, act.path))
+      }
+    }
     return (
       <Box key="quickbar" flexDirection="column">
-        {levelRows}
-        <Box key="bar" flexWrap="wrap">
-          {cfg.buttons.map((b, i) => {
-            const isSelect = Boolean(b.options)
-            const isOpen = openIdx === i
-            return pill(`btn-${i}`, isSelect ? `${b.label} ${isOpen ? '▴' : '▾'}` : b.label,
-              isOpen ? st.activeColor : (b.color ?? st.color),
-              async () => {
-                if (!isSelect) return deliver($, b, [])
-                await update($, open, () => (isOpen ? -1 : i))
-                await update($, path, () => [])
-              },
-              b.hotkey)
-          })}
-        </Box>
-        {errs.length > 0 && <Text dimColor>{`quickbar: ${errs[0]}`}</Text>}
+        {l.lines.map(line => (
+          <Box key={`line-${line.y}`}>
+            {line.pills.map(p => pill(p.id, p.label, p.color, press(p),
+              p.kind === 'button' ? cfg.buttons[p.index]?.hotkey : undefined))}
+          </Box>
+        ))}
+        {errLine}
       </Box>
     )
+  })
+
+  on('ui.message', async ($, e, next) => {
+    const data = e.data as { type?: string; button?: number; path?: number[] } | null
+    if (e.module.endsWith('bar.tsx') && data?.type === 'deliver' && typeof data.button === 'number') {
+      const cfg = await read($, config)
+      const b = cfg?.buttons[data.button]
+      if (b) await deliver($, b, chosen(b, Array.isArray(data.path) ? data.path : []))
+      return {}
+    }
+    return next(e)
   })
 
   on('session.end', async ($, e, next) => {

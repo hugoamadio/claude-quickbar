@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
 // The bar end to end: a fake disk with a user config, the session starting, presses on the drawing.
@@ -33,6 +33,7 @@ type World = { files: Map<string, string>; box: { text: string; cursor: number }
 
 function fakeEngine(on: On, files: Record<string, string>): World {
   const w: World = { files: new Map(Object.entries(files)), box: { text: '', cursor: 0 }, sent: [] }
+  mock.clock(on)
   on('session.root', async () => ({ value: ROOT }))
   on('env.get', async (_$, e) => ({ value: e.name === 'HOME' ? HOME : undefined }))
   on('fs.exists', async (_$, e) => ({ value: w.files.has(e.path) }))
@@ -53,7 +54,20 @@ function fakeEngine(on: On, files: Record<string, string>): World {
   return w
 }
 
-test('draws the user config and writes, sends and walks a select', async ($, on) => {
+// Cell positions of the pills, from the same layout the bar draws with.
+import { resolveStyle } from '../hooks/config'
+import { layout } from '../hooks/layout'
+import type { QuickbarButton } from '../types'
+
+const STYLE = resolveStyle(undefined)
+function at(open: number, path: number[], id: string) {
+  const l = layout(CONFIG.buttons as QuickbarButton[], STYLE, { open, path }, BAND.props.bodyColumns)
+  const line = l.lines.find(x => x.pills.some(p => p.id === id))!
+  const p = line.pills.find(x => x.id === id)!
+  return { x: p.x, y: line.y } // the top-left cell: padding, not the label
+}
+
+test('terminal and desktop: whole-pill clicks, hover navigation, click again folds, leave closes', async ($, on) => {
   const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
 
@@ -61,32 +75,65 @@ test('draws the user config and writes, sends and walks a select', async ($, on)
     w.box = { text: '', cursor: 0 }
     w.sent = []
     const ui = await $.ui.mount({ plugin: 'quickbar', surface, ...BAND })
+    const move = (p: { x: number; y: number }) => ui.pointer({ type: 'move', x: p.x, y: p.y, in: 'bar' })
+    const click = async (p: { x: number; y: number }) => {
+      await ui.pointer({ type: 'down', x: p.x, y: p.y, button: 'left', in: 'bar' })
+      await ui.pointer({ type: 'up', x: p.x, y: p.y, button: 'left', in: 'bar' })
+    }
 
-    expect((await ui.find({ key: 'btn-2' }))?.text).toContain('Review ▾')
-    await ui.press({ key: 'btn-0' })
+    expect(await ui.find({ type: 'Text', text: 'Review ▾', in: 'bar' })).toBeDefined()
+
+    await click(at(-1, [], 'b0')) // the padding corner of "Explain"
     expect(w.box.text).toBe('Explain this')
 
-    await ui.press({ key: 'btn-1' })
+    await click(at(-1, [], 'b1'))
     expect(w.sent).toEqual(['Explain thisShip it'])
-    expect(w.box.text).toBe('')
 
-    await ui.press({ key: 'btn-2' })
-    expect(await ui.find({ key: 'opt-0-1' })).toBeDefined()
-    await ui.press({ key: 'opt-0-1' })
-    expect((await ui.find({ key: 'opt-1-0' }))?.text).toContain('Strict')
-    await ui.press({ key: 'opt-1-0' })
+    // Hover alone opens Review, then Style's level.
+    await move(at(-1, [], 'b2'))
+    expect(await ui.find({ type: 'Text', text: 'Style ›', in: 'bar' })).toBeDefined()
+    await move(at(2, [], 'o0.1'))
+    expect(await ui.find({ type: 'Text', text: 'Strict', in: 'bar' })).toBeDefined()
+
+    // Clicking the open "Style" again folds its level.
+    await click(at(2, [1], 'o0.1'))
+    expect(await ui.find({ type: 'Text', text: 'Strict', in: 'bar' })).toBeUndefined()
+
+    // Open it again and pick the final choice.
+    await click(at(2, [], 'o0.1'))
+    await click(at(2, [1], 'o1.0'))
     expect(w.box.text).toBe('Review for style Strict')
-    expect(await ui.find({ key: 'opt-0-0' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: 'Style ›', in: 'bar' })).toBeUndefined()
+
+    // Leaving the bar closes open menus after a moment.
+    await move(at(-1, [], 'b2'))
+    expect(await ui.find({ type: 'Text', text: 'Bugs', in: 'bar' })).toBeDefined()
+    await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'bar' })
+    await ui.advance(700)
+    expect(await ui.find({ type: 'Text', text: 'Bugs', in: 'bar' })).toBeUndefined()
     await ui.unmount()
   }
+})
+
+test('vscode (no Client): the same bar as Buttons, click again folds', async ($, on) => {
+  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'vscode', ...BAND })
+  await ui.press({ key: 'b0' })
+  expect(w.box.text).toBe('Explain this')
+  await ui.press({ key: 'b2' })
+  await ui.press({ key: 'o0.1' })
+  expect(await ui.find({ key: 'o1.0' })).toBeDefined()
+  await ui.press({ key: 'o0.1' })
+  expect(await ui.find({ key: 'o1.0' })).toBeUndefined()
+  await ui.unmount()
 })
 
 test('without a config file it shows the bundled example (5 buttons, 3 selects)', async ($, on) => {
   fakeEngine(on, {})
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
-  for (let i = 0; i < 5; i++) expect(await ui.find({ key: `btn-${i}` })).toBeDefined()
-  expect(await ui.find({ key: 'btn-5' })).toBeUndefined()
+  for (const label of ['A', 'B', 'C ▾', 'D ▾', 'E ▾']) expect(await ui.find({ type: 'Text', text: label, in: 'bar' })).toBeDefined()
   expect((await $.command.run({ command: 'quickbar', args: 'where' } as never)).text).toContain('default config')
   await ui.unmount()
 })
