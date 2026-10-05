@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Example config validates
+        run: node scripts/check-config.ts
+
+      - name: Example config matches the JSON Schema
+        run: npx --yes ajv-cli@5 validate --spec=draft7 -s schema/quickbar.schema.json -d plugins/quickbar/defaults/quickbar.json
+
+      - name: Install Claude Code
+        run: npm install --global @anthropic-ai/claude-code
+
+      - name: Validate marketplace and plugin
+        run: |
+          claude plugin validate .
+          claude plugin validate ./plugins/quickbar
+
+      - name: Test plugin
+        run: claude plugin test ./plugins/quickbar

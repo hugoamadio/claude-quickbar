@@ -1,0 +1,69 @@
+{
+  "$schema": "https://raw.githubusercontent.com/hugoamadio/claude-quickbar/main/schema/quickbar.schema.json",
+  "style": {
+    "size": "lg",
+    "color": "#3b4252",
+    "activeColor": "#2e7d4f",
+    "hoverColor": "#5e6a82"
+  },
+  "buttons": [
+    {
+      "label": "Explain",
+      "color": "#1f6feb",
+      "hotkey": "e",
+      "text": "Explain how this works, step by step: "
+    },
+    {
+      "label": "Review",
+      "color": "#8957e5",
+      "hotkey": "r",
+      "text": "Review the current changes",
+      "options": [
+        { "label": "Bugs", "text": "for correctness bugs" },
+        { "label": "Security", "text": "for security issues" },
+        {
+          "label": "Style",
+          "text": "for readability",
+          "options": [
+            { "label": "Gentle", "text": "and only flag what really matters." },
+            { "label": "Strict", "text": "and flag every inconsistency." }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Tests",
+      "color": "#bf8700",
+      "hotkey": "t",
+      "options": [
+        { "label": "Write tests", "text": "Write tests for the code I just changed." },
+        { "label": "Run tests", "text": "Run the test suite and fix what fails.", "send": true },
+        { "label": "Coverage", "text": "Find the untested paths in this module." }
+      ]
+    },
+    {
+      "label": "Git",
+      "color": "#cf222e",
+      "hotkey": "g",
+      "options": [
+        { "label": "Status", "text": "Summarize the git status in one line.", "send": true },
+        {
+          "label": "Commit",
+          "text": "Commit the staged changes",
+          "options": [
+            { "label": "Conventional", "text": "with a conventional commit message." },
+            { "label": "Detailed", "text": "with a short title and a detailed body." }
+          ]
+        },
+        { "label": "PR", "text": "Open a pull request for this branch with a clear description." }
+      ]
+    },
+    {
+      "label": "Plan first",
+      "color": "#2e7d4f",
+      "hotkey": "p",
+      "mode": "append",
+      "text": "Before changing anything, show me a short plan and wait for my OK."
+    }
+  ]
+}

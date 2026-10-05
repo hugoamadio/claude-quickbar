@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-quickbar",
+  "description": "Configurable button bar for Claude Code.",
+  "owner": { "name": "Hugo Amadio", "url": "https://github.com/hugoamadio" },
+  "plugins": [
+    {
+      "name": "quickbar",
+      "source": "./plugins/quickbar",
+      "description": "Big, colorful, configurable buttons above the Claude Code prompt. Buttons and nested selects from one JSON file write (or send) your prompts.",
+      "category": "productivity",
+      "homepage": "https://github.com/hugoamadio/claude-quickbar"
+    }
+  ]
+}

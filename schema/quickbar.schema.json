@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/hugoamadio/claude-quickbar/main/schema/quickbar.schema.json",
+  "title": "Claude Quickbar config",
+  "description": "Buttons and nested selects shown above the Claude Code prompt by the quickbar plugin.",
+  "type": "object",
+  "required": ["buttons"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "style": { "$ref": "#/definitions/style" },
+    "buttons": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": { "$ref": "#/definitions/button" }
+    }
+  },
+  "definitions": {
+    "color": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A hex color (\"#2e7d4f\") or a terminal color name (\"red\", \"blueBright\").",
+      "examples": ["#1f6feb", "#8957e5", "#bf8700", "#cf222e", "#2e7d4f"]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["insert", "append", "replace"],
+      "description": "Where the text goes: insert at the cursor (default), append to the end, or replace the whole prompt."
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "size": { "type": "string", "enum": ["sm", "md", "lg"], "default": "lg", "description": "sm and md are one row tall, lg is three rows tall." },
+        "paddingX": { "type": "integer", "minimum": 0, "maximum": 8, "description": "Columns of color left and right of the label. Overrides size." },
+        "paddingY": { "type": "integer", "minimum": 0, "maximum": 3, "description": "Rows of color above and below the label. Overrides size." },
+        "gap": { "type": "integer", "minimum": 0, "maximum": 4, "default": 1, "description": "Columns between buttons." },
+        "color": { "$ref": "#/definitions/color", "description": "Default button background." },
+        "activeColor": { "$ref": "#/definitions/color", "description": "Background of the open select and of the chosen options." },
+        "hoverColor": { "$ref": "#/definitions/color", "description": "Background under the mouse pointer." }
+      }
+    },
+    "button": {
+      "type": "object",
+      "required": ["label"],
+      "additionalProperties": false,
+      "anyOf": [{ "required": ["text"] }, { "required": ["options"] }],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "description": "What the button shows." },
+        "text": { "type": "string", "description": "A button: the text it writes. A select: an optional prefix before the chosen options' texts." },
+        "color": { "$ref": "#/definitions/color" },
+        "hotkey": { "type": "string", "pattern": "^[a-z0-9]$", "description": "Presses the button while the bar has focus (click it, or ctrl+x then tab)." },
+        "mode": { "$ref": "#/definitions/mode" },
+        "send": { "type": "boolean", "default": false, "description": "true submits the prompt right away; false only writes it." },
+        "separator": { "type": "string", "default": " ", "description": "Joins the prefix and the chosen texts of a select." },
+        "options": { "$ref": "#/definitions/options", "description": "Makes the button a select." }
+      }
+    },
+    "options": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/option" }
+    },
+    "option": {
+      "type": "object",
+      "required": ["label"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "description": "Text this choice adds. A final choice without text adds its label." },
+        "color": { "$ref": "#/definitions/color" },
+        "mode": { "$ref": "#/definitions/mode", "description": "Overrides the button's mode when this choice is the last one." },
+        "send": { "type": "boolean", "description": "Overrides the button's send when this choice is the last one." },
+        "options": { "$ref": "#/definitions/options", "description": "Opens another level of choices above this one." }
+      }
+    }
+  }
+}
