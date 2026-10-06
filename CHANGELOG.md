@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Terminal: no more white stripe on the row under the pointer. Each row of a button is a blank Button whose inversion is invisible, and the label is drawn over it, so the whole button lights as one block.
+
 ## 0.3.1
 
 - Click and peek modes: a button lights as one block in `hoverColor` under the pointer, instead of row by row.

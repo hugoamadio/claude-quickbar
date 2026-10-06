@@ -143,7 +143,8 @@ test('a broken config shows one error button and /quickbar where lists the probl
   fakeEngine(on, { [USER_FILE]: '{"buttons": [{"label": "x"}]}' })
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
-  expect((await ui.find({ key: 'error' }))?.text).toContain('1 config error')
+  expect(await ui.find({ key: 'error' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '1 config error' })).toBeDefined()
   expect((await $.command.run({ command: 'quickbar', args: 'where' } as never)).text).toContain('needs "text"')
   await ui.unmount()
 })
@@ -179,12 +180,12 @@ test('navigation click (the default): Buttons only, no pointer-tracking Client, 
     w.box = { text: '', cursor: 0 }
     const ui = await $.ui.mount({ plugin: 'quickbar', surface, ...BAND })
     expect(await ui.find({ type: 'Client' })).toBeUndefined()
-    await ui.press({ key: 'b0-t0' }) // the top padding row of "Explain"
+    await ui.press({ key: surface === 'terminal' ? 'b0-r0' : 'b0' }) // the top padding row of "Explain"
     expect(w.box.text).toBe('Explain this')
-    await ui.press({ key: 'b2-b0' }) // the bottom padding row of "Review"
+    await ui.press({ key: surface === 'terminal' ? 'b2-r2' : 'b2' }) // the bottom padding row of "Review"
     expect(await ui.find({ key: 'o0.1' })).toBeDefined()
     await ui.press({ key: 'o0.1' })
-    await ui.press({ key: 'o1.0-t0' })
+    await ui.press({ key: surface === 'terminal' ? 'o1.0-r0' : 'o1.0' })
     expect(w.box.text).toBe('Explain thisReview for style Strict')
     await ui.unmount()
   }
@@ -210,4 +211,15 @@ test('navigation peek: each closed select has its first level hidden above the b
     await ui.press({ key: 'x' })
     await ui.unmount()
   }
+})
+
+test('terminal pill: blank Buttons whose inversion is invisible, label drawn as Text over the middle row', async ($, on) => {
+  fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
+  const middle = await ui.find({ key: 'b0' })
+  expect(middle?.text?.trim()).toBe('') // no label inside the Button: nothing to invert
+  expect(await ui.find({ type: 'Text', text: 'Explain' })).toBeDefined()
+  for (const r of ['b0-r0', 'b0-r2']) expect((await ui.find({ key: r }))?.text?.trim()).toBe('')
+  await ui.unmount()
 })

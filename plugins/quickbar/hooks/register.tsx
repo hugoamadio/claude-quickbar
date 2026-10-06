@@ -157,19 +157,35 @@ export const register: Register = on => {
       const width = [...label].length + 2 * st.paddingX
       const pad = ' '.repeat(st.paddingX)
       const press = () => void onPress()
-      // Every row of a pill shares one hover scope, so the whole pill lights at once (not row by row)
-      // in the hover color, instead of each Button's own row highlight. A select in peek mode passes its
-      // own scope, which also reveals its options row.
+      // Every row of a pill shares one hover scope, so the whole pill lights at once in the hover color.
+      // A select in peek mode passes its own scope, which also reveals its options row.
       const group = scope ?? `quickbar-pill-${key}`
       const lit = { scope: group, backgroundColor: st.hoverColor }
-      const blank = (row: string) => <Button key={`${key}-${row}`} plain label={' '.repeat(width)} hover={lit} onPress={press} />
-      const rows = Array.from({ length: st.paddingY }, (_, i) => i)
+      const keys = hotkey ? { hotkey } : {}
+
+      if (e.surface !== 'terminal') {
+        // Desktop and VS Code draw native buttons: one per pill, with its label.
+        return (
+          <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} hover={lit}>
+            <Button key={key} plain label={`${pad}${label}${pad}`} hover={{ ...lit, bold: true }} onPress={press} {...keys} />
+          </Box>
+        )
+      }
+
+      // Terminal: the terminal inverts the Button under the pointer (text and background swap). Every row is
+      // a blank Button whose text color is the hover color, so that inversion changes nothing on screen, and
+      // the label is a plain Text laid over the middle row, which never inverts. Clicks on any row press.
+      const rows = 1 + 2 * st.paddingY
+      const blankLit = { ...lit, color: st.hoverColor }
       return (
         <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
-          {rows.map(i => blank(`t${i}`))}
-          <Button key={key} plain label={`${pad}${label}${pad}`} hover={{ ...lit, bold: true }} onPress={press}
-            {...(hotkey ? { hotkey } : {})} />
-          {rows.map(i => blank(`b${i}`))}
+          {Array.from({ length: rows }, (_, r) => (
+            <Button key={r === st.paddingY ? key : `${key}-r${r}`} plain label={' '.repeat(width)} hover={blankLit}
+              onPress={press} {...(r === st.paddingY ? keys : {})} />
+          ))}
+          <Box key={`label-${key}`} position="absolute" top={st.paddingY} left={st.paddingX}>
+            <Text hover={{ scope: group, bold: true }}>{label}</Text>
+          </Box>
         </Box>
       )
     }
