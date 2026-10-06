@@ -10,7 +10,7 @@ One JSON file turns the prompts you type every day into one-click buttons, and i
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-2.1.287%2B-d97757)](https://claude.com/claude-code)
 
-<img src="docs/preview.svg" alt="Quickbar above the Claude Code prompt: a row of colored buttons, a Review select open with two levels of options, and the composed prompt in the input box" width="900">
+<img src="docs/demo.gif" alt="Quickbar in Claude Code: hovering the colored buttons opens their options, picking Commit then Detailed writes a full prompt, and Plan first writes another" width="738">
 
 </div>
 
