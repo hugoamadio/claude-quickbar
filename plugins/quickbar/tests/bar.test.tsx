@@ -155,3 +155,18 @@ test('/quickbar init writes the example once and never overwrites', async ($, on
   expect((await $.command.run({ command: 'quickbar', args: 'init' } as never)).text).toContain('already exists')
   expect((await $.command.run({ command: 'quickbar', args: 'init project' } as never)).text).toContain(`${ROOT}/.claude/quickbar.json`)
 })
+
+test('drawn before the config finished loading: no error button, and it loads by itself', async ($, on) => {
+  fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+  on('ui.render', async ($$, e) => { const { Text } = $$.ui.resolve(e); return <Text key="engine"> </Text> })
+  const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'error' })).toBeUndefined()
+  // The render started the load; the next draws show the bar once it lands.
+  let bar
+  for (let i = 0; i < 10 && !bar; i++) {
+    await ui.redraw()
+    bar = await ui.find({ type: 'Text', text: 'Review ▾', in: 'bar' })
+  }
+  expect(bar).toBeDefined()
+  await ui.unmount()
+})

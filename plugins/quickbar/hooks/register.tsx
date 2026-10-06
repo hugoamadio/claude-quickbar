@@ -22,7 +22,7 @@ const path = atom({ plugin: 'quickbar', key: 'path' } as const, [] as number[])
 const hidden = atom({ plugin: 'quickbar', key: 'hidden' } as const, false)
 
 const FILE = 'quickbar.json'
-const POLL_MS = 2000
+const POLL_MS = 3000
 const ERROR_COLOR = '#b42318'
 
 type Candidate = QuickbarSource & { kind: 'project' | 'user' }
@@ -125,6 +125,7 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
 export const register: Register = on => {
   let timer: Timer | undefined
   let last = ''
+  let loading: Promise<void> | undefined
 
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'quickbar', description: 'Quickbar: init, where, reload, hide, show' })
@@ -157,6 +158,12 @@ export const register: Register = on => {
           {...(hotkey ? { hotkey } : {})} />
       </Box>
     )
+
+    // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
+    if (!cfg && errs.length === 0) {
+      if (!loading) loading = load($).finally(() => { loading = undefined })
+      return next(e)
+    }
 
     if (!cfg) {
       return (

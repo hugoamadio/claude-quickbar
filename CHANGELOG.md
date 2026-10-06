@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- No more "0 config errors" button when the bar is drawn before the config finished loading.
+- The close timer runs only while menus wait to close; the config is checked every 3 s instead of 2 s.
+
 ## 0.1.0
 
 - Buttons that write, append, replace or send a prompt.

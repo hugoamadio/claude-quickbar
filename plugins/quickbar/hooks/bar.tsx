@@ -16,6 +16,8 @@ const CLOSED: View = { open: -1, path: [] }
 const TICK_MS = 100
 /** Ticks after the pointer leaves before open menus close. */
 const CLOSE_TICKS = 5
+/** The running close timer of each instance (a module function runs again on every draw). */
+const timers = new WeakMap<object, () => void>()
 
 const Bar: ClientModule<BarProps, State> = (props, surface) => {
   const { Box, Text } = surface.elements
@@ -31,19 +33,27 @@ const Bar: ClientModule<BarProps, State> = (props, surface) => {
   const view = st.view.open < props.buttons.length ? st.view : CLOSED
   const l = layout(props.buttons, props.style, view, props.columns)
 
-  if (surface.state === undefined) {
-    surface.setState(st)
-    surface.every(TICK_MS, () => {
+  if (surface.state === undefined) surface.setState(st)
+
+  // The close timer runs only while open menus wait to close after the pointer left: no idle ticking.
+  const startCloseTimer = () => {
+    timers.get(surface)?.()
+    timers.set(surface, surface.every(TICK_MS, () => {
       const s = surface.state
-      if (!s || s.closeIn <= 0) return
+      if (!s || s.closeIn <= 0) {
+        timers.get(surface)?.()
+        timers.delete(surface)
+        return
+      }
       set(s.closeIn === 1 ? { closeIn: 0, view: CLOSED, hover: null } : { closeIn: s.closeIn - 1 })
-    })
+    }))
   }
 
   surface.onPointer((e: ClientPointerEvent) => {
     const s = surface.state ?? st
     if (e.type === 'leave') {
       set({ hover: null, pressed: null, closeIn: s.view.open >= 0 ? CLOSE_TICKS : 0 })
+      if (s.view.open >= 0) startCloseTimer()
       return
     }
     const pill = hitTest(l, e.x, e.y)
