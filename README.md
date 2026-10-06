@@ -41,6 +41,16 @@ The bar appears with an example set of five buttons. Make it yours:
 
 This writes the example to `~/.claude/quickbar.json`. Edit it and save; the bar updates by itself.
 
+### Updates
+
+Claude Code turns auto-update off for third-party marketplaces. Turn it on once to get new versions:
+
+```text
+/plugin   →   Marketplaces   →   claude-quickbar   →   Enable auto-update
+```
+
+Claude Code then updates the plugin in the background and shows `Plugin updated: quickbar · Run /reload-plugins to apply`. To update by hand instead, run `claude plugin update quickbar@claude-quickbar`. What changed in each version is in the [CHANGELOG](CHANGELOG.md).
+
 ## Configure
 
 ```jsonc
