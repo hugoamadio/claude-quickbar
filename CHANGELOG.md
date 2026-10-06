@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Click and peek modes: a button lights as one block in `hoverColor` under the pointer, instead of row by row.
+
 ## 0.3.0
 
 - `"navigation": "peek"` (experimental): hovering a select reveals its first level with a hover style, without the pointer-tracking region; deeper levels open on click.

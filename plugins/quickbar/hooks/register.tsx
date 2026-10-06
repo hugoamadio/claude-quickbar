@@ -157,13 +157,18 @@ export const register: Register = on => {
       const width = [...label].length + 2 * st.paddingX
       const pad = ' '.repeat(st.paddingX)
       const press = () => void onPress()
-      const blank = (row: string) => <Button key={`${key}-${row}`} plain label={' '.repeat(width)} onPress={press} />
+      // Every row of a pill shares one hover scope, so the whole pill lights at once (not row by row)
+      // in the hover color, instead of each Button's own row highlight. A select in peek mode passes its
+      // own scope, which also reveals its options row.
+      const group = scope ?? `quickbar-pill-${key}`
+      const lit = { scope: group, backgroundColor: st.hoverColor }
+      const blank = (row: string) => <Button key={`${key}-${row}`} plain label={' '.repeat(width)} hover={lit} onPress={press} />
       const rows = Array.from({ length: st.paddingY }, (_, i) => i)
       return (
-        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap}
-          {...(scope ? { hover: { scope } } : {})}>
+        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
           {rows.map(i => blank(`t${i}`))}
-          <Button key={key} plain label={`${pad}${label}${pad}`} onPress={press} {...(hotkey ? { hotkey } : {})} />
+          <Button key={key} plain label={`${pad}${label}${pad}`} hover={{ ...lit, bold: true }} onPress={press}
+            {...(hotkey ? { hotkey } : {})} />
           {rows.map(i => blank(`b${i}`))}
         </Box>
       )
