@@ -153,14 +153,15 @@ export const register: Register = on => {
 
     // A pill made only of Buttons, so the whole colored area is clickable without tracking the pointer:
     // blank Buttons for the padding rows, and the label padded with spaces to the pill's width.
-    const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string) => {
+    const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string, scope?: string) => {
       const width = [...label].length + 2 * st.paddingX
       const pad = ' '.repeat(st.paddingX)
       const press = () => void onPress()
       const blank = (row: string) => <Button key={`${key}-${row}`} plain label={' '.repeat(width)} onPress={press} />
       const rows = Array.from({ length: st.paddingY }, (_, i) => i)
       return (
-        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap}>
+        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap}
+          {...(scope ? { hover: { scope } } : {})}>
           {rows.map(i => blank(`t${i}`))}
           <Button key={key} plain label={`${pad}${label}${pad}`} onPress={press} {...(hotkey ? { hotkey } : {})} />
           {rows.map(i => blank(`b${i}`))}
@@ -210,14 +211,45 @@ export const register: Register = on => {
         if (b) await deliver($, b, chosen(b, act.path))
       }
     }
+    const isPeek = cfg.navigation === 'peek'
+    const scopeOf = (i: number) => `quickbar-select-${i}`
+    const drawLine = (line: (typeof l.lines)[number], onPress: (p: Pill) => () => Promise<void>, prefix = '') => (
+      <Box key={`${prefix}line-${line.y}`}>
+        {line.pills.map(p => pill(`${prefix}${p.id}`, p.label, p.color, onPress(p),
+          p.kind === 'button' ? cfg.buttons[p.index]?.hotkey : undefined,
+          isPeek && p.kind === 'button' && p.hasChildren && view.open !== p.index ? scopeOf(p.index) : undefined))}
+      </Box>
+    )
+    const barStart = l.lines.findIndex(line => line.pills.some(p => p.kind === 'button'))
+
+    // Peek: each closed select's first level, hidden right above the bar and revealed by hovering the select
+    // (a hover style, no pointer tracking). The revealed row shares the select's hover scope, so moving onto
+    // it keeps it open; a click there works like click navigation.
+    const peeks = isPeek
+      ? cfg.buttons.flatMap((b, i) => {
+        if (!b.options || view.open === i) return []
+        const pv = { open: i, path: [] as number[] }
+        const pl = layout(cfg.buttons, st, pv, e.props.bodyColumns)
+        const rows = pl.lines.filter(line => line.pills.every(p => p.kind !== 'button'))
+        const pressPeek = (p: Pill) => async () => {
+          const act = activate(pv, p)
+          await update($, open, () => act.view.open)
+          await update($, path, () => [...act.view.path])
+          if (act.kind === 'deliver') await deliver($, b, chosen(b, act.path))
+        }
+        return [(
+          <Box key={`peek-${i}`} flexDirection="column" display="none" hover={{ display: 'flex', scope: scopeOf(i) }}>
+            {rows.map(line => drawLine(line, pressPeek, `p${i}-`))}
+          </Box>
+        )]
+      })
+      : []
+
     return (
       <Box key="quickbar" flexDirection="column">
-        {l.lines.map(line => (
-          <Box key={`line-${line.y}`}>
-            {line.pills.map(p => pill(p.id, p.label, p.color, press(p),
-              p.kind === 'button' ? cfg.buttons[p.index]?.hotkey : undefined))}
-          </Box>
-        ))}
+        {l.lines.slice(0, barStart).map(line => drawLine(line, press))}
+        {peeks}
+        {l.lines.slice(barStart).map(line => drawLine(line, press))}
         {errLine}
       </Box>
     )

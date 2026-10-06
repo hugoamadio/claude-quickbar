@@ -64,7 +64,7 @@ export function validate(raw: unknown): Parsed {
   const errors: string[] = []
   if (!isObject(raw)) return { config: null, errors: ['the file must hold a JSON object'] }
   checkStyle(raw.style, errors)
-  if (raw.navigation !== undefined && !['click', 'hover'].includes(raw.navigation as string)) errors.push('navigation: one of click, hover')
+  if (raw.navigation !== undefined && !['click', 'hover', 'peek'].includes(raw.navigation as string)) errors.push('navigation: one of click, hover, peek')
   const buttons = raw.buttons
   if (!Array.isArray(buttons) || buttons.length === 0) {
     errors.push('buttons: must be a non-empty list')

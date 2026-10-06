@@ -189,3 +189,25 @@ test('navigation click (the default): Buttons only, no pointer-tracking Client, 
     await ui.unmount()
   }
 })
+
+test('navigation peek: each closed select has its first level hidden above the bar, pressable, no Client', async ($, on) => {
+  const two = { ...CONFIG, navigation: 'peek', buttons: [...CONFIG.buttons, { label: 'Git', options: [{ label: 'Status', text: 'git status' }] }] }
+  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(two) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    w.box = { text: '', cursor: 0 }
+    const ui = await $.ui.mount({ plugin: 'quickbar', surface, ...BAND })
+    expect(await ui.find({ type: 'Client' })).toBeUndefined()
+    // The peek row of "Review" (button 2) is drawn, hidden until hover: its options are already pressable.
+    await ui.press({ key: 'p2-o0.0' }) // "Bugs", a final choice, straight from Review's peek row
+    expect(w.box.text).toBe('Review for bugs')
+    await ui.press({ key: 'p3-o0.0' }) // Git's peek row: same option position, its own key
+    expect(w.box.text).toBe('Review for bugsgit status')
+    // An option with children opens its level by click, as in click navigation.
+    await ui.press({ key: 'p2-o0.1' })
+    expect(await ui.find({ key: 'o1.0' })).toBeDefined()
+    expect(await ui.find({ key: 'p2-o0.1' })).toBeUndefined() // open by click: no peek row for it
+    await ui.press({ key: 'x' })
+    await ui.unmount()
+  }
+})

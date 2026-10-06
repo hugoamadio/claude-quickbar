@@ -89,6 +89,7 @@ The `$schema` line gives you autocompletion and inline errors in VS Code and any
 |---|---|
 | `"click"` (default) | Click a select to open it, click an option to pick it. The whole button is clickable. Text selection in the terminal works as usual. |
 | `"hover"` | Hovering opens selects and their levels like a desktop menu bar; leaving the bar closes them. Claude Code then tracks the pointer, which takes over text selection in the terminal: a selection may start a little off the pointer. |
+| `"peek"` *(experimental)* | Hovering a select reveals its first level right above it, and it stays while the pointer is on it; deeper levels open on click. It uses a hover style only, without tracking the pointer. |
 
 ```json
 { "navigation": "hover", "buttons": [ ... ] }

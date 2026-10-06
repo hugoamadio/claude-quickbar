@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- `"navigation": "peek"` (experimental): hovering a select reveals its first level with a hover style, without the pointer-tracking region; deeper levels open on click.
+
 ## 0.2.0
 
 - `navigation`: `click` (new default) or `hover`. Hover tracks the pointer, which took over text selection in the terminal (selection started off the pointer), so it is now opt-in.

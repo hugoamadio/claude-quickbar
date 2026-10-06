@@ -44,7 +44,8 @@ describe('validate', () => {
 
   test('navigation is click or hover', async () => {
     expect(validate({ ...ok, navigation: 'hover' }).errors).toEqual([])
-    expect(validate({ ...ok, navigation: 'mouse' }).errors).toEqual(['navigation: one of click, hover'])
+    expect(validate({ ...ok, navigation: 'peek' }).errors).toEqual([])
+    expect(validate({ ...ok, navigation: 'mouse' }).errors).toEqual(['navigation: one of click, hover, peek'])
   })
 
   test('bad JSON says so', async () => {

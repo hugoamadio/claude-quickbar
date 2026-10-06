@@ -52,8 +52,10 @@ export type QuickbarStyle = {
  * `click` (default): click to open and pick; text selection in the terminal keeps working.
  * `hover`: hovering opens selects and levels like a desktop menu. It makes Claude Code track the pointer,
  * which takes over text selection in the terminal (selection may start a little off the pointer).
+ * `peek` (experimental): hovering a select reveals its first level with a hover style, no pointer tracking;
+ * deeper levels open on click.
  */
-export type QuickbarNavigation = 'click' | 'hover'
+export type QuickbarNavigation = 'click' | 'hover' | 'peek'
 
 export type QuickbarConfig = {
   $schema?: string
