@@ -89,7 +89,7 @@ const close = async ($: EngineInterface) => {
 }
 
 const USAGE = [
-  'quickbar: big buttons above the prompt, from quickbar.json',
+  'big buttons above the prompt, from quickbar.json',
   '  /quickbar init           copy the example config to ~/.claude/quickbar.json',
   '  /quickbar init project   copy it to this project (.claude/quickbar.json)',
   '  /quickbar where          show which config is active and its errors',
@@ -102,24 +102,24 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
   if (verb === 'init') {
     const list = await candidates($)
     const dest = list.find(c => c.kind === (target === 'project' ? 'project' : 'user'))
-    if (!dest) return 'quickbar: no home directory found for the user config.'
-    if (await $.fs.exists(dest.path)) return `quickbar: ${dest.path} already exists; edit it, nothing was overwritten.`
+    if (!dest) return 'no home directory found for the user config.'
+    if (await $.fs.exists(dest.path)) return `${dest.path} already exists; edit it, nothing was overwritten.`
     await $.fs.write(dest.path, await $.fs.read(`${$.plugin.root}/defaults/${FILE}`))
     await load($)
-    return `quickbar: wrote ${dest.path}. Edit it and save; the bar updates by itself.`
+    return `wrote ${dest.path}. Edit it and save; the bar updates by itself.`
   }
   if (verb === 'reload') {
     await load($)
   } else if (verb === 'hide' || verb === 'show') {
     await update($, hidden, () => verb === 'hide')
-    return `quickbar: bar ${verb === 'hide' ? 'hidden' : 'shown'}.`
+    return `bar ${verb === 'hide' ? 'hidden' : 'shown'}.`
   } else if (verb !== 'where') {
     return USAGE
   }
   const src = await read($, source)
   const errs = await read($, errors)
   const where = src ? `${src.kind} config: ${src.path}` : 'no config loaded'
-  return errs.length ? `quickbar: ${where}\n${errs.length} error(s):\n- ${errs.join('\n- ')}` : `quickbar: ${where} (ok)`
+  return errs.length ? `${where}\n${errs.length} error(s):\n- ${errs.join('\n- ')}` : `${where} (ok)`
 }
 
 export const register: Register = on => {
@@ -151,13 +151,22 @@ export const register: Register = on => {
     const errs = await read($, errors)
     const st = resolveStyle(cfg?.style)
 
-    const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string) => (
-      <Box key={`pill-${key}`} backgroundColor={bg} paddingX={st.paddingX} paddingY={st.paddingY}
-        marginRight={st.gap} hover={{ backgroundColor: st.hoverColor }}>
-        <Button key={key} plain label={label} hover={{ bold: true }} onPress={() => void onPress()}
-          {...(hotkey ? { hotkey } : {})} />
-      </Box>
-    )
+    // A pill made only of Buttons, so the whole colored area is clickable without tracking the pointer:
+    // blank Buttons for the padding rows, and the label padded with spaces to the pill's width.
+    const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string) => {
+      const width = [...label].length + 2 * st.paddingX
+      const pad = ' '.repeat(st.paddingX)
+      const press = () => void onPress()
+      const blank = (row: string) => <Button key={`${key}-${row}`} plain label={' '.repeat(width)} onPress={press} />
+      const rows = Array.from({ length: st.paddingY }, (_, i) => i)
+      return (
+        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap}>
+          {rows.map(i => blank(`t${i}`))}
+          <Button key={key} plain label={`${pad}${label}${pad}`} onPress={press} {...(hotkey ? { hotkey } : {})} />
+          {rows.map(i => blank(`b${i}`))}
+        </Box>
+      )
+    }
 
     // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
     if (!cfg && errs.length === 0) {
@@ -177,8 +186,8 @@ export const register: Register = on => {
     const errLine = errs.length > 0 ? <Text dimColor>{`quickbar: ${errs[0]}`}</Text> : null
     const table = $.ui.resolve(e)
 
-    // A Client (hover and whole-pill clicks) where the surface has one; the typings say terminal and desktop.
-    if ((e.surface === 'terminal' || e.surface === 'desktop') && 'Client' in table) {
+    // Hover navigation is opt-in: its Client tracks the pointer, which takes over text selection in the terminal.
+    if (cfg.navigation === 'hover' && (e.surface === 'terminal' || e.surface === 'desktop') && 'Client' in table) {
       const { Client } = table
       const props: BarProps = { buttons: cfg.buttons, style: st, columns: e.props.bodyColumns }
       return (
@@ -189,7 +198,7 @@ export const register: Register = on => {
       )
     }
 
-    // Fallback without a Client: the same layout drawn with Buttons, driven by clicks.
+    // Click navigation (the default, and VS Code): the same layout drawn with Buttons.
     const view = { open: await read($, open), path: await read($, path) }
     const l = layout(cfg.buttons, st, view, e.props.bodyColumns)
     const press = (p: Pill) => async () => {

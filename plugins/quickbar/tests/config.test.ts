@@ -42,6 +42,11 @@ describe('validate', () => {
     expect(validate({ buttons: [{ label: 'deep', options: opts }] }).errors.join()).toContain('nested deeper than 6 levels')
   })
 
+  test('navigation is click or hover', async () => {
+    expect(validate({ ...ok, navigation: 'hover' }).errors).toEqual([])
+    expect(validate({ ...ok, navigation: 'mouse' }).errors).toEqual(['navigation: one of click, hover'])
+  })
+
   test('bad JSON says so', async () => {
     expect(parse('{ nope').errors[0]).toContain('not valid JSON')
   })

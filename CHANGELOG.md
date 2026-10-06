@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- `navigation`: `click` (new default) or `hover`. Hover tracks the pointer, which took over text selection in the terminal (selection started off the pointer), so it is now opt-in.
+- In click mode the whole button is clickable too, padding rows included.
+- Command replies no longer repeat the plugin name.
+
 ## 0.1.1
 
 - No more "0 config errors" button when the bar is drawn before the config finished loading.

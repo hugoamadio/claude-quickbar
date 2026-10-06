@@ -67,8 +67,8 @@ function at(open: number, path: number[], id: string) {
   return { x: p.x, y: line.y } // the top-left cell: padding, not the label
 }
 
-test('terminal and desktop: whole-pill clicks, hover navigation, click again folds, leave closes', async ($, on) => {
-  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+test('navigation hover (terminal, desktop): whole-pill clicks, hover opens, click again folds, leave closes', async ($, on) => {
+  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify({ ...CONFIG, navigation: 'hover' }) })
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
 
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -115,8 +115,8 @@ test('terminal and desktop: whole-pill clicks, hover navigation, click again fol
   }
 })
 
-test('vscode (no Client): the same bar as Buttons, click again folds', async ($, on) => {
-  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+test('vscode ignores hover (no Client): the same bar as Buttons', async ($, on) => {
+  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify({ ...CONFIG, navigation: 'hover' }) })
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'vscode', ...BAND })
   await ui.press({ key: 'b0' })
@@ -133,7 +133,8 @@ test('without a config file it shows the bundled example (5 buttons, 3 selects)'
   fakeEngine(on, {})
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
-  for (const label of ['A', 'B', 'C ▾', 'D ▾', 'E ▾']) expect(await ui.find({ type: 'Text', text: label, in: 'bar' })).toBeDefined()
+  for (let i = 0; i < 5; i++) expect(await ui.find({ key: `b${i}` })).toBeDefined()
+  expect(await ui.find({ key: 'b5' })).toBeUndefined()
   expect((await $.command.run({ command: 'quickbar', args: 'where' } as never)).text).toContain('default config')
   await ui.unmount()
 })
@@ -165,8 +166,26 @@ test('drawn before the config finished loading: no error button, and it loads by
   let bar
   for (let i = 0; i < 10 && !bar; i++) {
     await ui.redraw()
-    bar = await ui.find({ type: 'Text', text: 'Review ▾', in: 'bar' })
+    bar = await ui.find({ key: 'b2' })
   }
   expect(bar).toBeDefined()
   await ui.unmount()
+})
+
+test('navigation click (the default): Buttons only, no pointer-tracking Client, padding rows click too', async ($, on) => {
+  const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    w.box = { text: '', cursor: 0 }
+    const ui = await $.ui.mount({ plugin: 'quickbar', surface, ...BAND })
+    expect(await ui.find({ type: 'Client' })).toBeUndefined()
+    await ui.press({ key: 'b0-t0' }) // the top padding row of "Explain"
+    expect(w.box.text).toBe('Explain this')
+    await ui.press({ key: 'b2-b0' }) // the bottom padding row of "Review"
+    expect(await ui.find({ key: 'o0.1' })).toBeDefined()
+    await ui.press({ key: 'o0.1' })
+    await ui.press({ key: 'o1.0-t0' })
+    expect(w.box.text).toBe('Explain thisReview for style Strict')
+    await ui.unmount()
+  }
 })

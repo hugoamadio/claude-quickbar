@@ -19,7 +19,7 @@ One JSON file turns the prompts you type every day into one-click buttons, and i
 You probably type the same handful of prompts all day: *explain this*, *review for bugs*, *run the tests and fix what fails*, *plan first*. Quickbar puts them one click away, in your own words, without leaving the prompt.
 
 - **Buttons** write a prompt, or send it right away.
-- **Selects** open their options above the bar, like a desktop menu: hover walks the levels, a click picks. Options can open more options, so a few moves compose a precise prompt.
+- **Selects** open their options above the bar. Options can open more options, so a few clicks compose a precise prompt. Opt in to `"navigation": "hover"` to walk the levels with the mouse, like a desktop menu.
 - **One file** describes everything: labels, colors, text, where the text goes, and whether it is sent.
 - **Live reload**: save the file and the bar updates. A broken file never breaks your session; the bar tells you what is wrong.
 
@@ -72,6 +72,17 @@ This writes the example to `~/.claude/quickbar.json`. Edit it and save; the bar 
 ```
 
 The `$schema` line gives you autocompletion and inline errors in VS Code and any editor that reads JSON Schema.
+
+### Navigation
+
+| Value | Behavior |
+|---|---|
+| `"click"` (default) | Click a select to open it, click an option to pick it. The whole button is clickable. Text selection in the terminal works as usual. |
+| `"hover"` | Hovering opens selects and their levels like a desktop menu bar; leaving the bar closes them. Claude Code then tracks the pointer, which takes over text selection in the terminal: a selection may start a little off the pointer. |
+
+```json
+{ "navigation": "hover", "buttons": [ ... ] }
+```
 
 ### Where the config lives
 
@@ -133,11 +144,9 @@ Colors accept hex (`#2e7d4f`) or terminal color names (`red`, `blueBright`).
 
 ## Using the bar
 
-- **Hover** works like a desktop menu bar: pointing at a select opens it, pointing at an option with `›` opens its level, and moving away closes the menus after a moment.
 - **Click** anywhere on a button, not only on its label. Clicking an open select or an open option again folds it; `✕` closes the select.
-- **Keyboard**: click the bar once to give it focus, then press a button's `hotkey`; `Esc` returns to the prompt.
-- Hover needs a terminal that reports mouse movement (most do). Without it, clicks do everything.
-- In VS Code, which has no pointer-tracking region yet, the bar falls back to plain clickable buttons.
+- **Keyboard**: press `ctrl+x` then `tab` to focus the bar, then a button's `hotkey`; `Esc` returns to the prompt. (With `"navigation": "hover"`, click the bar once instead.)
+- **Hover** (opt-in): pointing at a select opens it, pointing at an option with `›` opens its level, and moving away closes the menus after a moment. It needs a terminal that reports mouse movement; VS Code always uses click navigation.
 
 ## Validate a config in CI
 
@@ -152,6 +161,7 @@ Runs the same checks as the plugin (Node 22.18 or later).
 - Mods are an early-access Claude Code feature; the API may change between releases.
 - The band above the prompt has a maximum height. Many open levels at size `lg` scroll inside it.
 - Button label colors follow the terminal theme; only backgrounds are configurable.
+- `"navigation": "hover"` makes Claude Code track the pointer, which changes how text selection behaves in the terminal. That is why `click` is the default.
 
 ## Development
 
