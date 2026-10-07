@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+
+- Terminal: clicking on a button's label works again (the label had been drawn over the button and took the click). Under the pointer the label row now inverts to a darker shade of the hover color instead of white.
+
 ## 0.3.3
 
 - Shares the band above the prompt: whatever other plugins draw there is kept, above the bar, instead of being replaced.

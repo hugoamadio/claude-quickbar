@@ -123,4 +123,13 @@ export function resolveStyle(style: QuickbarStyle | undefined): ResolvedStyle {
   }
 }
 
+/** A darker shade of a #rgb/#rrggbb color (a color name gets a fixed dark slate). */
+export function shade(color: string, amount = 0.45): string {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim())
+  if (!m || !m[1]) return '#2b3242'
+  const hex = m[1].length === 3 ? [...m[1]].map(c => c + c).join('') : m[1]
+  const ch = (i: number) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - amount)).toString(16).padStart(2, '0')
+  return `#${ch(0)}${ch(2)}${ch(4)}`
+}
+
 export type { QuickbarButton, QuickbarOption }

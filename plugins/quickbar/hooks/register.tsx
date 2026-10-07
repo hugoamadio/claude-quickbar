@@ -4,7 +4,7 @@ import type { EngineInterface, Register, RenderElement, Timer } from 'claude-cod
 import type { QuickbarButton, QuickbarConfig, QuickbarOption, QuickbarSource } from '../types'
 import type { BarProps } from './bar'
 import { applyMode, chosen, deliveryOf } from './compose'
-import { parse, resolveStyle } from './config'
+import { parse, resolveStyle, shade } from './config'
 import { activate, layout } from './layout'
 import type { Pill } from './layout'
 
@@ -22,6 +22,7 @@ const path = atom({ plugin: 'quickbar', key: 'path' } as const, [] as number[])
 const hidden = atom({ plugin: 'quickbar', key: 'hidden' } as const, false)
 
 const FILE = 'quickbar.json'
+
 const POLL_MS = 3000
 const ERROR_COLOR = '#b42318'
 
@@ -175,25 +176,23 @@ export const register: Register = on => {
           )
         }
 
-        // Terminal: the terminal inverts the Button under the pointer (text and background swap). Every row is
-        // a blank Button whose text color is the hover color, so that inversion changes nothing on screen, and
-        // the label is a plain Text laid over the middle row, which never inverts. Clicks on any row press.
-        const rows = 1 + 2 * st.paddingY
-        const blankLit = { ...lit, color: st.hoverColor }
-        return (
-          <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
-            {Array.from({ length: rows }, (_, r) => (
-              <Button key={r === st.paddingY ? key : `${key}-r${r}`} plain label={' '.repeat(width)} hover={blankLit}
-                onPress={press} {...(r === st.paddingY ? keys : {})} />
-            ))}
-            <Box key={`label-${key}`} position="absolute" top={st.paddingY} left={st.paddingX}>
-              <Text hover={{ scope: group, bold: true }}>{label}</Text>
-            </Box>
-          </Box>
-        )
-      }
+        // Terminal: the terminal inverts the Button under the pointer (text and background swap). The padding
+      // rows are blank Buttons whose text color is the hover color, so their inversion changes nothing. The
+      // label row is a real Button (a click on the letters must press it): its hover text color is a darker
+      // shade of the hover color, so under the pointer it inverts to that shade instead of a white stripe.
+      const rows = 1 + 2 * st.paddingY
+      const blankLit = { ...lit, color: st.hoverColor }
+      const labelLit = { ...lit, color: shade(st.hoverColor), bold: true }
+      return (
+        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
+          {Array.from({ length: rows }, (_, r) => r === st.paddingY
+            ? <Button key={key} plain label={`${pad}${label}${pad}`} hover={labelLit} onPress={press} {...keys} />
+            : <Button key={`${key}-r${r}`} plain label={' '.repeat(width)} hover={blankLit} onPress={press} />)}
+        </Box>
+      )
+    }
 
-      // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
+    // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
       if (!cfg && errs.length === 0) {
         if (!loading) loading = load($).finally(() => { loading = undefined })
         return null
