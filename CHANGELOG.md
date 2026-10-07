@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+
+- Terminal: each button is one block (a single Button whose label spans every row). A click anywhere presses it, and under the pointer the whole block lights at once in the hover color, the same on every row.
+
 ## 0.3.4
 
 - Terminal: clicking on a button's label works again (the label had been drawn over the button and took the click). Under the pointer the label row now inverts to a darker shade of the hover color instead of white.

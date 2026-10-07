@@ -4,7 +4,7 @@ import type { EngineInterface, Register, RenderElement, Timer } from 'claude-cod
 import type { QuickbarButton, QuickbarConfig, QuickbarOption, QuickbarSource } from '../types'
 import type { BarProps } from './bar'
 import { applyMode, chosen, deliveryOf } from './compose'
-import { parse, resolveStyle, shade } from './config'
+import { parse, resolveStyle } from './config'
 import { activate, layout } from './layout'
 import type { Pill } from './layout'
 
@@ -25,6 +25,8 @@ const FILE = 'quickbar.json'
 
 const POLL_MS = 3000
 const ERROR_COLOR = '#b42318'
+/** Label color under the pointer (given as the background, since the terminal inverts the Button there). */
+const HOVER_TEXT = '#f0f3f6'
 
 type Candidate = QuickbarSource & { kind: 'project' | 'user' }
 
@@ -176,18 +178,20 @@ export const register: Register = on => {
           )
         }
 
-        // Terminal: the terminal inverts the Button under the pointer (text and background swap). The padding
-      // rows are blank Buttons whose text color is the hover color, so their inversion changes nothing. The
-      // label row is a real Button (a click on the letters must press it): its hover text color is a darker
-      // shade of the hover color, so under the pointer it inverts to that shade instead of a white stripe.
-      const rows = 1 + 2 * st.paddingY
-      const blankLit = { ...lit, color: st.hoverColor }
-      const labelLit = { ...lit, color: shade(st.hoverColor), bold: true }
+        // Terminal: the whole pill is ONE Button whose label spans every row, so a click anywhere presses it and
+      // the terminal's inversion under the pointer covers the whole block at once. That inversion swaps text
+      // and background, so the hover colors are given pre-inverted: what shows is the hover color behind light
+      // text, the same on every row.
+      const blank = ' '.repeat(width)
+      const lines = [
+        ...Array.from({ length: st.paddingY }, () => blank),
+        `${pad}${label}${pad}`,
+        ...Array.from({ length: st.paddingY }, () => blank),
+      ]
+      const inverted = { scope: group, color: st.hoverColor, backgroundColor: HOVER_TEXT, bold: true }
       return (
-        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
-          {Array.from({ length: rows }, (_, r) => r === st.paddingY
-            ? <Button key={key} plain label={`${pad}${label}${pad}`} hover={labelLit} onPress={press} {...keys} />
-            : <Button key={`${key}-r${r}`} plain label={' '.repeat(width)} hover={blankLit} onPress={press} />)}
+        <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} hover={lit}>
+          <Button key={key} plain label={lines.join('\n')} hover={inverted} onPress={press} {...keys} />
         </Box>
       )
     }

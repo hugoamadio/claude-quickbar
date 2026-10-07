@@ -57,7 +57,7 @@ function fakeEngine(on: On, files: Record<string, string>): World {
 }
 
 // Cell positions of the pills, from the same layout the bar draws with.
-import { resolveStyle, shade } from '../hooks/config'
+import { resolveStyle } from '../hooks/config'
 import { layout } from '../hooks/layout'
 import type { QuickbarButton } from '../types'
 
@@ -180,12 +180,12 @@ test('navigation click (the default): Buttons only, no pointer-tracking Client, 
     w.box = { text: '', cursor: 0 }
     const ui = await $.ui.mount({ plugin: 'quickbar', surface, ...BAND })
     expect(await ui.find({ type: 'Client' })).toBeUndefined()
-    await ui.press({ key: surface === 'terminal' ? 'b0-r0' : 'b0' }) // the top padding row of "Explain"
+    await ui.press({ key: 'b0' })
     expect(w.box.text).toBe('Explain this')
-    await ui.press({ key: surface === 'terminal' ? 'b2-r2' : 'b2' }) // the bottom padding row of "Review"
+    await ui.press({ key: 'b2' })
     expect(await ui.find({ key: 'o0.1' })).toBeDefined()
     await ui.press({ key: 'o0.1' })
-    await ui.press({ key: surface === 'terminal' ? 'o1.0-r0' : 'o1.0' })
+    await ui.press({ key: 'o1.0' })
     expect(w.box.text).toBe('Explain thisReview for style Strict')
     await ui.unmount()
   }
@@ -213,21 +213,18 @@ test('navigation peek: each closed select has its first level hidden above the b
   }
 })
 
-test('terminal pill: the label row is a real Button (clicks on the letters press it); padding rows are blank', async ($, on) => {
+test('terminal pill: one Button spanning every row (label in the middle), so the whole block is one click target', async ($, on) => {
   const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
-  expect((await ui.find({ key: 'b0' }))?.text).toContain('Explain')
-  for (const r of ['b0-r0', 'b0-r2']) expect((await ui.find({ key: r }))?.text?.trim()).toBe('')
+  const lines = ((await ui.find({ key: 'b0' }))?.text ?? '').split('\n')
+  expect(lines.length).toBe(3)
+  expect(lines.map(l => l.length)).toEqual([13, 13, 13])
+  expect(lines[1]).toBe('   Explain   ')
+  expect(await ui.find({ key: 'b0-r0' })).toBeUndefined()
   await ui.press({ key: 'b0' })
   expect(w.box.text).toBe('Explain this')
   await ui.unmount()
-})
-
-test('shade darkens a hex color and falls back for names', async () => {
-  expect(shade('#5e6a82')).toBe('#343a48')
-  expect(shade('#fff')).toBe('#8c8c8c')
-  expect(shade('blueBright')).toBe('#2b3242')
 })
 
 test('shares the band: what other plugins draw there stays, above the bar', async ($, on) => {
