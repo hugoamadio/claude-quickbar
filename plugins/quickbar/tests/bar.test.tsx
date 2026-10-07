@@ -218,7 +218,7 @@ test('terminal pill: one single-row Button, no hover colors of its own (Claude C
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
   const b0 = await ui.find({ key: 'b0' })
-  expect(b0?.text).toBe('   Explain   ')
+  expect(b0?.text).toBe(' Explain   ') // drawn as "e: Explain   ": the hotkey takes two padding columns
   expect(JSON.stringify(b0)).not.toContain('hover')
   expect((await ui.find({ key: 'b1' }))?.text).toBe('   Ship ⏎   ') // sends right away
   await ui.press({ key: 'b0' })

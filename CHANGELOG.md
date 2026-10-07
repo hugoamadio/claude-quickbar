@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- A button with a hotkey keeps its label centered: Claude Code draws the hotkey as "e:" before the label, which now takes two padding columns instead of pushing the label right.
+
 ## 0.4.1
 
 - `/quickbar demo` shows the bundled example in the current session only (for recording a demo); `/quickbar demo off` goes back.

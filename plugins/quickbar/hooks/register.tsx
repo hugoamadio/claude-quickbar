@@ -168,9 +168,12 @@ export const register: Register = on => {
       // A select in peek mode puts its pill in a hover scope that only reveals its options row.
       const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string, scope?: string) => {
         const pad = ' '.repeat(st.paddingX)
+        // A plain Button with a hotkey is drawn as "e: label": the "e:" takes two of the left padding columns,
+        // so the pill keeps its width and the label stays centered.
+        const left = hotkey ? ' '.repeat(Math.max(1, st.paddingX - 2)) : pad
         return (
           <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} {...(scope ? { hover: { scope } } : {})}>
-            <Button key={key} plain label={`${pad}${label}${pad}`} onPress={() => void onPress()} {...(hotkey ? { hotkey } : {})} />
+            <Button key={key} plain label={`${left}${label}${pad}`} onPress={() => void onPress()} {...(hotkey ? { hotkey } : {})} />
           </Box>
         )
       }
