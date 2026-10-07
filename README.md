@@ -153,6 +153,7 @@ Colors accept hex (`#2e7d4f`) or terminal color names (`red`, `blueBright`).
 | `/quickbar where` | Show which config is active and list its errors. |
 | `/quickbar reload` | Read the config again (saving the file also does it). |
 | `/quickbar hide`, `/quickbar show` | Hide or show the bar for this session. |
+| `/quickbar demo`, `/quickbar demo off` | Show the bundled example in this session only, for recording a demo. |
 
 ## Using the bar
 

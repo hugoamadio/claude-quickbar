@@ -244,3 +244,12 @@ test('shares the band: what other plugins draw there stays, above the bar', asyn
   expect(await ui.find({ key: 'engine-band', plugin: 'test' } as never)).toBeDefined()
   await ui.unmount()
 })
+
+test('/quickbar demo shows the bundled example in this session, demo off brings the config back', async ($, on) => {
+  fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  expect((await $.command.run({ command: 'quickbar', args: 'demo' } as never)).text).toContain('demo on')
+  expect((await $.command.run({ command: 'quickbar', args: 'where' } as never)).text).toContain('default config')
+  await $.command.run({ command: 'quickbar', args: 'demo off' } as never)
+  expect((await $.command.run({ command: 'quickbar', args: 'where' } as never)).text).toContain(`user config: ${USER_FILE}`)
+})

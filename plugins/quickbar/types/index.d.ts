@@ -78,6 +78,8 @@ declare module 'claude-code' {
       /** Indexes of the chosen options, one per level, of the open select. */
       path: number[]
       hidden: boolean
+      /** This session shows the bundled example instead of the config files (/quickbar demo). */
+      demo: boolean
     }
   }
 }

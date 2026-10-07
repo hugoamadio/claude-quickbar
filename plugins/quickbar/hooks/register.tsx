@@ -20,6 +20,7 @@ const errors = atom({ plugin: 'quickbar', key: 'errors' } as const, [] as string
 const open = atom({ plugin: 'quickbar', key: 'open' } as const, -1)
 const path = atom({ plugin: 'quickbar', key: 'path' } as const, [] as number[])
 const hidden = atom({ plugin: 'quickbar', key: 'hidden' } as const, false)
+const demo = atom({ plugin: 'quickbar', key: 'demo' } as const, false)
 
 const FILE = 'quickbar.json'
 
@@ -47,7 +48,8 @@ async function fingerprint($: EngineInterface): Promise<string> {
 /** Loads the first config found: the project's, then the user's, then the bundled example. */
 async function load($: EngineInterface): Promise<void> {
   let found: QuickbarSource = { kind: 'default', path: `${$.plugin.root}/defaults/${FILE}` }
-  for (const c of await candidates($)) {
+  // Demo mode (this session only): the bundled example, whatever config files exist.
+  for (const c of (await read($, demo)) ? [] : await candidates($)) {
     if (await $.fs.exists(c.path)) {
       found = c
       break
@@ -96,6 +98,7 @@ const USAGE = [
   '  /quickbar where          show which config is active and its errors',
   '  /quickbar reload         read the config again (it also reloads on save)',
   '  /quickbar hide | show    hide or show the bar',
+  '  /quickbar demo [off]     show the bundled example in this session only (for recording a demo)',
 ].join('\n')
 
 async function runCommand($: EngineInterface, args: string): Promise<string> {
@@ -111,6 +114,10 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
   }
   if (verb === 'reload') {
     await load($)
+  } else if (verb === 'demo') {
+    await update($, demo, () => target !== 'off')
+    await load($)
+    return target === 'off' ? 'demo off: your config is back in this session.' : 'demo on: the bundled example in this session only. /quickbar demo off to go back.'
   } else if (verb === 'hide' || verb === 'show') {
     await update($, hidden, () => verb === 'hide')
     return `bar ${verb === 'hide' ? 'hidden' : 'shown'}.`

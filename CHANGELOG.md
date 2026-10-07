@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- `/quickbar demo` shows the bundled example in the current session only (for recording a demo); `/quickbar demo off` goes back.
+
 ## 0.4.0
 
 - Buttons are one row tall in `click` and `peek` navigation, and use Claude Code's own pointer highlight with no hover colors of their own. Claude Code inverts a button under the pointer, cleanly only for one-row buttons (a taller button inverted only its first row, stacked rows lit row by row, and pre-set hover colors showed as white blocks). This replaces the 0.3.x attempts.
