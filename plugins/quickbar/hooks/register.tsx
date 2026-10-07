@@ -25,8 +25,6 @@ const FILE = 'quickbar.json'
 
 const POLL_MS = 3000
 const ERROR_COLOR = '#b42318'
-/** Label color under the pointer (given as the background, since the terminal inverts the Button there). */
-const HOVER_TEXT = '#f0f3f6'
 
 type Candidate = QuickbarSource & { kind: 'project' | 'user' }
 
@@ -157,44 +155,18 @@ export const register: Register = on => {
       const errs = await read($, errors)
       const st = resolveStyle(cfg?.style)
 
-      // A pill made only of Buttons, so the whole colored area is clickable without tracking the pointer:
-      // blank Buttons for the padding rows, and the label padded with spaces to the pill's width.
+      // A pill is one single-row Button on a colored Box. Claude Code highlights a Button under the pointer by
+      // inverting it, and only a single-row Button inverts as a whole (a taller one inverts only its first row,
+      // stacked Buttons row by row), so pills are one row tall and carry no hover colors of their own.
+      // A select in peek mode puts its pill in a hover scope that only reveals its options row.
       const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string, scope?: string) => {
-        const width = [...label].length + 2 * st.paddingX
         const pad = ' '.repeat(st.paddingX)
-        const press = () => void onPress()
-        // Every row of a pill shares one hover scope, so the whole pill lights at once in the hover color.
-        // A select in peek mode passes its own scope, which also reveals its options row.
-        const group = scope ?? `quickbar-pill-${key}`
-        const lit = { scope: group, backgroundColor: st.hoverColor }
-        const keys = hotkey ? { hotkey } : {}
-
-        if (e.surface !== 'terminal') {
-          // Desktop and VS Code draw native buttons: one per pill, with its label.
-          return (
-            <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} hover={lit}>
-              <Button key={key} plain label={`${pad}${label}${pad}`} hover={{ ...lit, bold: true }} onPress={press} {...keys} />
-            </Box>
-          )
-        }
-
-        // Terminal: the whole pill is ONE Button whose label spans every row, so a click anywhere presses it and
-      // the terminal's inversion under the pointer covers the whole block at once. That inversion swaps text
-      // and background, so the hover colors are given pre-inverted: what shows is the hover color behind light
-      // text, the same on every row.
-      const blank = ' '.repeat(width)
-      const lines = [
-        ...Array.from({ length: st.paddingY }, () => blank),
-        `${pad}${label}${pad}`,
-        ...Array.from({ length: st.paddingY }, () => blank),
-      ]
-      const inverted = { scope: group, color: st.hoverColor, backgroundColor: HOVER_TEXT, bold: true }
-      return (
-        <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} hover={lit}>
-          <Button key={key} plain label={lines.join('\n')} hover={inverted} onPress={press} {...keys} />
-        </Box>
-      )
-    }
+        return (
+          <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} {...(scope ? { hover: { scope } } : {})}>
+            <Button key={key} plain label={`${pad}${label}${pad}`} onPress={() => void onPress()} {...(hotkey ? { hotkey } : {})} />
+          </Box>
+        )
+      }
 
     // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
       if (!cfg && errs.length === 0) {
@@ -258,6 +230,13 @@ export const register: Register = on => {
           const pv = { open: i, path: [] as number[] }
           const pl = layout(cfg.buttons, st, pv, e.props.bodyColumns)
           const rows = pl.lines.filter(line => line.pills.every(p => p.kind !== 'button'))
+          // Right above its own select: shifted to the select's column, as far as the row still fits.
+          const selectX = l.lines.flatMap(line => line.pills).find(p => p.id === `b${i}`)?.x ?? 0
+          const rowWidth = Math.max(0, ...rows.map(line => {
+            const last = line.pills[line.pills.length - 1]
+            return last ? last.x + last.width : 0
+          }))
+          const shift = Math.max(0, Math.min(selectX, e.props.bodyColumns - rowWidth))
           const pressPeek = (p: Pill) => async () => {
             const act = activate(pv, p)
             await update($, open, () => act.view.open)
@@ -265,7 +244,7 @@ export const register: Register = on => {
             if (act.kind === 'deliver') await deliver($, b, chosen(b, act.path))
           }
           return [(
-            <Box key={`peek-${i}`} flexDirection="column" display="none" hover={{ display: 'flex', scope: scopeOf(i) }}>
+            <Box key={`peek-${i}`} flexDirection="column" marginLeft={shift} display="none" hover={{ display: 'flex', scope: scopeOf(i) }}>
               {rows.map(line => drawLine(line, pressPeek, `p${i}-`))}
             </Box>
           )]

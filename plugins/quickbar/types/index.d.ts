@@ -34,7 +34,7 @@ export type QuickbarButton = {
 }
 
 export type QuickbarStyle = {
-  /** `sm` one row, `md` one row with wider padding, `lg` three rows tall. Default `lg`. */
+  /** How wide a button is. Buttons are one row tall, except with hover navigation, where `lg` is three rows. Default `lg`. */
   size?: 'sm' | 'md' | 'lg'
   paddingX?: number
   paddingY?: number

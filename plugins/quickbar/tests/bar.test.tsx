@@ -213,17 +213,26 @@ test('navigation peek: each closed select has its first level hidden above the b
   }
 })
 
-test('terminal pill: one Button spanning every row (label in the middle), so the whole block is one click target', async ($, on) => {
+test('terminal pill: one single-row Button, no hover colors of its own (Claude Code inverts it as a whole)', async ($, on) => {
   const w = fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
-  const lines = ((await ui.find({ key: 'b0' }))?.text ?? '').split('\n')
-  expect(lines.length).toBe(3)
-  expect(lines.map(l => l.length)).toEqual([13, 13, 13])
-  expect(lines[1]).toBe('   Explain   ')
-  expect(await ui.find({ key: 'b0-r0' })).toBeUndefined()
+  const b0 = await ui.find({ key: 'b0' })
+  expect(b0?.text).toBe('   Explain   ')
+  expect(JSON.stringify(b0)).not.toContain('hover')
+  expect((await ui.find({ key: 'b1' }))?.text).toBe('   Ship ⏎   ') // sends right away
   await ui.press({ key: 'b0' })
   expect(w.box.text).toBe('Explain this')
+  await ui.unmount()
+})
+
+test('peek: the options row sits above its own select', async ($, on) => {
+  const two = { ...CONFIG, navigation: 'peek' }
+  fakeEngine(on, { [USER_FILE]: JSON.stringify(two) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
+  // Review is the third button: Explain (13) + gap + Ship ⏎ (12) + gap = column 27
+  expect(JSON.stringify(await ui.find({ key: 'peek-2' }))).toContain('"marginLeft":27')
   await ui.unmount()
 })
 

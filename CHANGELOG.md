@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Buttons are one row tall in `click` and `peek` navigation, and use Claude Code's own pointer highlight with no hover colors of their own. Claude Code inverts a button under the pointer, cleanly only for one-row buttons (a taller button inverted only its first row, stacked rows lit row by row, and pre-set hover colors showed as white blocks). This replaces the 0.3.x attempts.
+- Peek: the options row opens right above its own select, and the select no longer turns white while the pointer is on its options.
+- `⏎` after a label marks a button or option that sends the prompt right away.
+
 ## 0.3.5
 
 - Terminal: each button is one block (a single Button whose label spans every row). A click anywhere presses it, and under the pointer the whole block lights at once in the hover color, the same on every row.

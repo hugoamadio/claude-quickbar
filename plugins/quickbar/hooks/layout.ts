@@ -56,7 +56,7 @@ export function layout(buttons: readonly QuickbarButton[], st: ResolvedStyle, vi
   const bar = buttons.map((b, i): Omit<Pill, 'x'> => {
     const isSelect = Boolean(b.options)
     const isOpen = view.open === i
-    const label = isSelect ? `${b.label} ${isOpen ? '▴' : '▾'}` : b.label
+    const label = isSelect ? `${b.label} ${isOpen ? '▴' : '▾'}` : b.send ? `${b.label} ⏎` : b.label
     return {
       id: `b${i}`, kind: 'button', index: i, depth: -1, label, width: width(label),
       color: isOpen ? st.activeColor : (b.color ?? st.color), isActive: isOpen, hasChildren: isSelect,
@@ -68,7 +68,8 @@ export function layout(buttons: readonly QuickbarButton[], st: ResolvedStyle, vi
   if (open?.options) {
     levels(open, view.path).forEach((opts, depth) => {
       const pills = opts.map((o, j): Omit<Pill, 'x'> => {
-        const label = o.options ? `${o.label} ›` : o.label
+        // ⏎ marks a final choice that sends the prompt right away.
+        const label = o.options ? `${o.label} ›` : (o.send ?? open.send) ? `${o.label} ⏎` : o.label
         const isActive = view.path[depth] === j
         return {
           id: `o${depth}.${j}`, kind: 'option', index: j, depth, label, width: width(label),

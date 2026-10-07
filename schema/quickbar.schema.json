@@ -68,7 +68,7 @@
             "lg"
           ],
           "default": "lg",
-          "description": "sm and md are one row tall, lg is three rows tall."
+          "description": "How wide a button is. Buttons are one row tall in click and peek navigation."
         },
         "paddingX": {
           "type": "integer",
@@ -80,7 +80,7 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 3,
-          "description": "Rows of color above and below the label. Overrides size."
+          "description": "Rows of color above and below the label. Only with navigation hover, which draws the bar itself."
         },
         "gap": {
           "type": "integer",

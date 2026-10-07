@@ -89,7 +89,7 @@ The `$schema` line gives you autocompletion and inline errors in VS Code and any
 |---|---|
 | `"click"` (default) | Click a select to open it, click an option to pick it. The whole button is clickable. Text selection in the terminal works as usual. |
 | `"hover"` | Hovering opens selects and their levels like a desktop menu bar; leaving the bar closes them. Claude Code then tracks the pointer, which takes over text selection in the terminal: a selection may start a little off the pointer. |
-| `"peek"` *(experimental)* | Hovering a select reveals its first level right above it, and it stays while the pointer is on it; deeper levels open on click. It uses a hover style only, without tracking the pointer. |
+| `"peek"` *(experimental)* | Hovering a select reveals its options right above it, and they stay while the pointer is on them; deeper levels open on click. It uses a hover style only, without tracking the pointer. |
 
 ```json
 { "navigation": "hover", "buttons": [ ... ] }
@@ -134,12 +134,13 @@ A select writes once, when you reach a choice with no further `options`. The com
 
 | Field | Default | Description |
 |---|---|---|
-| `size` | `lg` | `sm` and `md` are one row tall; `lg` is three rows tall. |
-| `paddingX`, `paddingY` | from `size` | Fine-tune the button size (0–8 columns, 0–3 rows). |
+| `size` | `lg` | How wide a button is: `sm`, `md` or `lg`. Buttons are one row tall (see below). |
+| `paddingX` | from `size` | Columns of color left and right of the label (0–8). |
+| `paddingY` | from `size` | Rows above and below the label, only with `"navigation": "hover"` (0–3). |
 | `gap` | `1` | Columns between buttons. |
 | `color` | `#3b4252` | Default background. |
 | `activeColor` | `#2e7d4f` | The open select and the chosen options. |
-| `hoverColor` | `#5e6a82` | Under the mouse pointer. |
+| `hoverColor` | `#5e6a82` | Under the pointer, with `"navigation": "hover"`. |
 
 Colors accept hex (`#2e7d4f`) or terminal color names (`red`, `blueBright`).
 
@@ -155,7 +156,9 @@ Colors accept hex (`#2e7d4f`) or terminal color names (`red`, `blueBright`).
 
 ## Using the bar
 
-- **Click** anywhere on a button, not only on its label. Clicking an open select or an open option again folds it; `✕` closes the select.
+- **Click** anywhere on a button. Clicking an open select or an open option again folds it; `✕` closes the select.
+- **⏎** after a label marks a button or option that sends the prompt right away.
+- Under the pointer, Claude Code highlights a button by inverting its colors. It does that cleanly only for one-row buttons, which is why buttons are one row tall in `click` and `peek` navigation.
 - **Keyboard**: press `ctrl+x` then `tab` to focus the bar, then a button's `hotkey`; `Esc` returns to the prompt. (With `"navigation": "hover"`, click the bar once instead.)
 - **Hover** (opt-in): pointing at a select opens it, pointing at an option with `›` opens its level, and moving away closes the menus after a moment. It needs a terminal that reports mouse movement; VS Code always uses click navigation.
 
@@ -172,6 +175,7 @@ Runs the same checks as the plugin (Node 22.18 or later).
 - Mods are an early-access Claude Code feature; the API may change between releases.
 - The band above the prompt has a maximum height. Many open levels at size `lg` scroll inside it.
 - Button label colors follow the terminal theme; only backgrounds are configurable.
+- Buttons are one row tall in `click` and `peek` navigation: Claude Code's pointer highlight covers only the first row of a taller button.
 - `"navigation": "hover"` makes Claude Code track the pointer, which changes how text selection behaves in the terminal. That is why `click` is the default.
 
 ## Development

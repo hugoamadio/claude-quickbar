@@ -104,6 +104,8 @@ export function parse(text: string): Parsed {
 
 export type ResolvedStyle = Required<Pick<QuickbarStyle, 'paddingX' | 'paddingY' | 'gap' | 'color' | 'activeColor' | 'hoverColor'>>
 
+// Buttons are one row tall in click and peek navigation (see register.tsx); paddingY only shapes the bar that
+// hover navigation draws itself.
 const SIZE: Record<string, { paddingX: number; paddingY: number }> = {
   sm: { paddingX: 1, paddingY: 0 },
   md: { paddingX: 2, paddingY: 0 },
