@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, Timer } from 'claude-code'
+import type { EngineInterface, Register, RenderElement, Timer } from 'claude-code'
 
 import type { QuickbarButton, QuickbarConfig, QuickbarOption, QuickbarSource } from '../types'
 import type { BarProps } from './bar'
@@ -144,134 +144,146 @@ export const register: Register = on => {
   on('command.run', { command: 'quickbar' }, async ($, e) => ({ text: await runCommand($, e.args) }))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey || (await read($, hidden))) return next(e)
+    // Other plugins may draw in this band too: draw ours under whatever the chain beneath returns.
+    const below = await next(e)
+    const mine = await (async (): Promise<RenderElement | null> => {
+      if (e.props.hasSurvey || (await read($, hidden))) return null
 
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const cfg = await read($, config)
-    const errs = await read($, errors)
-    const st = resolveStyle(cfg?.style)
+      const { Box, Button, Text } = $.ui.resolve(e)
+      const cfg = await read($, config)
+      const errs = await read($, errors)
+      const st = resolveStyle(cfg?.style)
 
-    // A pill made only of Buttons, so the whole colored area is clickable without tracking the pointer:
-    // blank Buttons for the padding rows, and the label padded with spaces to the pill's width.
-    const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string, scope?: string) => {
-      const width = [...label].length + 2 * st.paddingX
-      const pad = ' '.repeat(st.paddingX)
-      const press = () => void onPress()
-      // Every row of a pill shares one hover scope, so the whole pill lights at once in the hover color.
-      // A select in peek mode passes its own scope, which also reveals its options row.
-      const group = scope ?? `quickbar-pill-${key}`
-      const lit = { scope: group, backgroundColor: st.hoverColor }
-      const keys = hotkey ? { hotkey } : {}
+      // A pill made only of Buttons, so the whole colored area is clickable without tracking the pointer:
+      // blank Buttons for the padding rows, and the label padded with spaces to the pill's width.
+      const pill = (key: string, label: string, bg: string, onPress: () => unknown, hotkey?: string, scope?: string) => {
+        const width = [...label].length + 2 * st.paddingX
+        const pad = ' '.repeat(st.paddingX)
+        const press = () => void onPress()
+        // Every row of a pill shares one hover scope, so the whole pill lights at once in the hover color.
+        // A select in peek mode passes its own scope, which also reveals its options row.
+        const group = scope ?? `quickbar-pill-${key}`
+        const lit = { scope: group, backgroundColor: st.hoverColor }
+        const keys = hotkey ? { hotkey } : {}
 
-      if (e.surface !== 'terminal') {
-        // Desktop and VS Code draw native buttons: one per pill, with its label.
+        if (e.surface !== 'terminal') {
+          // Desktop and VS Code draw native buttons: one per pill, with its label.
+          return (
+            <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} hover={lit}>
+              <Button key={key} plain label={`${pad}${label}${pad}`} hover={{ ...lit, bold: true }} onPress={press} {...keys} />
+            </Box>
+          )
+        }
+
+        // Terminal: the terminal inverts the Button under the pointer (text and background swap). Every row is
+        // a blank Button whose text color is the hover color, so that inversion changes nothing on screen, and
+        // the label is a plain Text laid over the middle row, which never inverts. Clicks on any row press.
+        const rows = 1 + 2 * st.paddingY
+        const blankLit = { ...lit, color: st.hoverColor }
         return (
-          <Box key={`pill-${key}`} backgroundColor={bg} marginRight={st.gap} hover={lit}>
-            <Button key={key} plain label={`${pad}${label}${pad}`} hover={{ ...lit, bold: true }} onPress={press} {...keys} />
+          <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
+            {Array.from({ length: rows }, (_, r) => (
+              <Button key={r === st.paddingY ? key : `${key}-r${r}`} plain label={' '.repeat(width)} hover={blankLit}
+                onPress={press} {...(r === st.paddingY ? keys : {})} />
+            ))}
+            <Box key={`label-${key}`} position="absolute" top={st.paddingY} left={st.paddingX}>
+              <Text hover={{ scope: group, bold: true }}>{label}</Text>
+            </Box>
           </Box>
         )
       }
 
-      // Terminal: the terminal inverts the Button under the pointer (text and background swap). Every row is
-      // a blank Button whose text color is the hover color, so that inversion changes nothing on screen, and
-      // the label is a plain Text laid over the middle row, which never inverts. Clicks on any row press.
-      const rows = 1 + 2 * st.paddingY
-      const blankLit = { ...lit, color: st.hoverColor }
-      return (
-        <Box key={`pill-${key}`} flexDirection="column" backgroundColor={bg} marginRight={st.gap} hover={lit}>
-          {Array.from({ length: rows }, (_, r) => (
-            <Button key={r === st.paddingY ? key : `${key}-r${r}`} plain label={' '.repeat(width)} hover={blankLit}
-              onPress={press} {...(r === st.paddingY ? keys : {})} />
-          ))}
-          <Box key={`label-${key}`} position="absolute" top={st.paddingY} left={st.paddingX}>
-            <Text hover={{ scope: group, bold: true }}>{label}</Text>
+      // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
+      if (!cfg && errs.length === 0) {
+        if (!loading) loading = load($).finally(() => { loading = undefined })
+        return null
+      }
+
+      if (!cfg) {
+        return (
+          <Box key="quickbar-error">
+            {pill('error', `quickbar: ${errs.length} config error${errs.length === 1 ? '' : 's'}, press for details`, ERROR_COLOR,
+              () => $.ui.toast(`${errs.slice(0, 3).join(' · ')}  (run /quickbar where)`, { timeoutMs: 10000 }))}
           </Box>
+        )
+      }
+
+      const errLine = errs.length > 0 ? <Text dimColor>{`quickbar: ${errs[0]}`}</Text> : null
+      const table = $.ui.resolve(e)
+
+      // Hover navigation is opt-in: its Client tracks the pointer, which takes over text selection in the terminal.
+      if (cfg.navigation === 'hover' && (e.surface === 'terminal' || e.surface === 'desktop') && 'Client' in table) {
+        const { Client } = table
+        const props: BarProps = { buttons: cfg.buttons, style: st, columns: e.props.bodyColumns }
+        return (
+          <Box key="quickbar" flexDirection="column">
+            <Client key="bar" module="./bar.tsx" props={props} />
+            {errLine}
+          </Box>
+        )
+      }
+
+      // Click navigation (the default, and VS Code): the same layout drawn with Buttons.
+      const view = { open: await read($, open), path: await read($, path) }
+      const l = layout(cfg.buttons, st, view, e.props.bodyColumns)
+      const press = (p: Pill) => async () => {
+        const act = activate(view, p)
+        await update($, open, () => act.view.open)
+        await update($, path, () => [...act.view.path])
+        if (act.kind === 'deliver') {
+          const b = cfg.buttons[act.button]
+          if (b) await deliver($, b, chosen(b, act.path))
+        }
+      }
+      const isPeek = cfg.navigation === 'peek'
+      const scopeOf = (i: number) => `quickbar-select-${i}`
+      const drawLine = (line: (typeof l.lines)[number], onPress: (p: Pill) => () => Promise<void>, prefix = '') => (
+        <Box key={`${prefix}line-${line.y}`}>
+          {line.pills.map(p => pill(`${prefix}${p.id}`, p.label, p.color, onPress(p),
+            p.kind === 'button' ? cfg.buttons[p.index]?.hotkey : undefined,
+            isPeek && p.kind === 'button' && p.hasChildren && view.open !== p.index ? scopeOf(p.index) : undefined))}
         </Box>
       )
-    }
+      const barStart = l.lines.findIndex(line => line.pills.some(p => p.kind === 'button'))
 
-    // Not loaded yet (drawn before session.start finished): draw nothing and make sure a load is on its way.
-    if (!cfg && errs.length === 0) {
-      if (!loading) loading = load($).finally(() => { loading = undefined })
-      return next(e)
-    }
+      // Peek: each closed select's first level, hidden right above the bar and revealed by hovering the select
+      // (a hover style, no pointer tracking). The revealed row shares the select's hover scope, so moving onto
+      // it keeps it open; a click there works like click navigation.
+      const peeks = isPeek
+        ? cfg.buttons.flatMap((b, i) => {
+          if (!b.options || view.open === i) return []
+          const pv = { open: i, path: [] as number[] }
+          const pl = layout(cfg.buttons, st, pv, e.props.bodyColumns)
+          const rows = pl.lines.filter(line => line.pills.every(p => p.kind !== 'button'))
+          const pressPeek = (p: Pill) => async () => {
+            const act = activate(pv, p)
+            await update($, open, () => act.view.open)
+            await update($, path, () => [...act.view.path])
+            if (act.kind === 'deliver') await deliver($, b, chosen(b, act.path))
+          }
+          return [(
+            <Box key={`peek-${i}`} flexDirection="column" display="none" hover={{ display: 'flex', scope: scopeOf(i) }}>
+              {rows.map(line => drawLine(line, pressPeek, `p${i}-`))}
+            </Box>
+          )]
+        })
+        : []
 
-    if (!cfg) {
-      return (
-        <Box key="quickbar-error">
-          {pill('error', `quickbar: ${errs.length} config error${errs.length === 1 ? '' : 's'}, press for details`, ERROR_COLOR,
-            () => $.ui.toast(`${errs.slice(0, 3).join(' · ')}  (run /quickbar where)`, { timeoutMs: 10000 }))}
-        </Box>
-      )
-    }
-
-    const errLine = errs.length > 0 ? <Text dimColor>{`quickbar: ${errs[0]}`}</Text> : null
-    const table = $.ui.resolve(e)
-
-    // Hover navigation is opt-in: its Client tracks the pointer, which takes over text selection in the terminal.
-    if (cfg.navigation === 'hover' && (e.surface === 'terminal' || e.surface === 'desktop') && 'Client' in table) {
-      const { Client } = table
-      const props: BarProps = { buttons: cfg.buttons, style: st, columns: e.props.bodyColumns }
       return (
         <Box key="quickbar" flexDirection="column">
-          <Client key="bar" module="./bar.tsx" props={props} />
+          {l.lines.slice(0, barStart).map(line => drawLine(line, press))}
+          {peeks}
+          {l.lines.slice(barStart).map(line => drawLine(line, press))}
           {errLine}
         </Box>
       )
-    }
-
-    // Click navigation (the default, and VS Code): the same layout drawn with Buttons.
-    const view = { open: await read($, open), path: await read($, path) }
-    const l = layout(cfg.buttons, st, view, e.props.bodyColumns)
-    const press = (p: Pill) => async () => {
-      const act = activate(view, p)
-      await update($, open, () => act.view.open)
-      await update($, path, () => [...act.view.path])
-      if (act.kind === 'deliver') {
-        const b = cfg.buttons[act.button]
-        if (b) await deliver($, b, chosen(b, act.path))
-      }
-    }
-    const isPeek = cfg.navigation === 'peek'
-    const scopeOf = (i: number) => `quickbar-select-${i}`
-    const drawLine = (line: (typeof l.lines)[number], onPress: (p: Pill) => () => Promise<void>, prefix = '') => (
-      <Box key={`${prefix}line-${line.y}`}>
-        {line.pills.map(p => pill(`${prefix}${p.id}`, p.label, p.color, onPress(p),
-          p.kind === 'button' ? cfg.buttons[p.index]?.hotkey : undefined,
-          isPeek && p.kind === 'button' && p.hasChildren && view.open !== p.index ? scopeOf(p.index) : undefined))}
-      </Box>
-    )
-    const barStart = l.lines.findIndex(line => line.pills.some(p => p.kind === 'button'))
-
-    // Peek: each closed select's first level, hidden right above the bar and revealed by hovering the select
-    // (a hover style, no pointer tracking). The revealed row shares the select's hover scope, so moving onto
-    // it keeps it open; a click there works like click navigation.
-    const peeks = isPeek
-      ? cfg.buttons.flatMap((b, i) => {
-        if (!b.options || view.open === i) return []
-        const pv = { open: i, path: [] as number[] }
-        const pl = layout(cfg.buttons, st, pv, e.props.bodyColumns)
-        const rows = pl.lines.filter(line => line.pills.every(p => p.kind !== 'button'))
-        const pressPeek = (p: Pill) => async () => {
-          const act = activate(pv, p)
-          await update($, open, () => act.view.open)
-          await update($, path, () => [...act.view.path])
-          if (act.kind === 'deliver') await deliver($, b, chosen(b, act.path))
-        }
-        return [(
-          <Box key={`peek-${i}`} flexDirection="column" display="none" hover={{ display: 'flex', scope: scopeOf(i) }}>
-            {rows.map(line => drawLine(line, pressPeek, `p${i}-`))}
-          </Box>
-        )]
-      })
-      : []
-
+    })()
+    if (!mine) return below
+    const { Box } = $.ui.resolve(e)
     return (
-      <Box key="quickbar" flexDirection="column">
-        {l.lines.slice(0, barStart).map(line => drawLine(line, press))}
-        {peeks}
-        {l.lines.slice(barStart).map(line => drawLine(line, press))}
-        {errLine}
+      <Box key="quickbar-stack" flexDirection="column">
+        {below}
+        {mine}
       </Box>
     )
   })

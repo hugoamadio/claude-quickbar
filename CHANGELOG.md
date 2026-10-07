@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3
+
+- Shares the band above the prompt: whatever other plugins draw there is kept, above the bar, instead of being replaced.
+
 ## 0.3.2
 
 - Terminal: no more white stripe on the row under the pointer. Each row of a button is a blank Button whose inversion is invisible, and the label is drawn over it, so the whole button lights as one block.

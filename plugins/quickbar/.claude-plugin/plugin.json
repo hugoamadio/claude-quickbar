@@ -1,6 +1,6 @@
 {
   "name": "quickbar",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Big, colorful, configurable buttons above the Claude Code prompt. Buttons and nested selects from one JSON file write (or send) your prompts.",
   "author": { "name": "Hugo Amadio", "url": "https://github.com/hugoamadio" },
   "homepage": "https://github.com/hugoamadio/claude-quickbar",

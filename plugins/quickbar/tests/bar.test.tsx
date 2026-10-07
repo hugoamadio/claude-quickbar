@@ -51,6 +51,8 @@ function fakeEngine(on: On, files: Record<string, string>): World {
     return { isFilled: true }
   })
   on('prompt.submit', async (_$, e) => { w.sent.push(e.text); return { text: e.text } })
+  // The engine draws nothing of its own above the prompt.
+  on('ui.render', async ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box key="engine-band" /> })
   return w
 }
 
@@ -160,7 +162,6 @@ test('/quickbar init writes the example once and never overwrites', async ($, on
 
 test('drawn before the config finished loading: no error button, and it loads by itself', async ($, on) => {
   fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
-  on('ui.render', async ($$, e) => { const { Text } = $$.ui.resolve(e); return <Text key="engine"> </Text> })
   const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
   expect(await ui.find({ key: 'error' })).toBeUndefined()
   // The render started the load; the next draws show the bar once it lands.
@@ -221,5 +222,14 @@ test('terminal pill: blank Buttons whose inversion is invisible, label drawn as 
   expect(middle?.text?.trim()).toBe('') // no label inside the Button: nothing to invert
   expect(await ui.find({ type: 'Text', text: 'Explain' })).toBeDefined()
   for (const r of ['b0-r0', 'b0-r2']) expect((await ui.find({ key: r }))?.text?.trim()).toBe('')
+  await ui.unmount()
+})
+
+test('shares the band: what other plugins draw there stays, above the bar', async ($, on) => {
+  fakeEngine(on, { [USER_FILE]: JSON.stringify(CONFIG) })
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true } as never)
+  const ui = await $.ui.mount({ plugin: 'quickbar', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'b0' })).toBeDefined()
+  expect(await ui.find({ key: 'engine-band', plugin: 'test' } as never)).toBeDefined()
   await ui.unmount()
 })
